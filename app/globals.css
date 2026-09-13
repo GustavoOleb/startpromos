@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+:root {
+  --void: #070707;
+  --graphite: #111111;
+  --panel: #161616;
+  --fog: #f3efe8;
+  --mist: #cfc8be;
+  --mute: #8a847c;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --signal: #ff5a1f;
+  --signal-deep: #e2430d;
+  --electric: #6ee7f9;
+  --rose: #ff4d8d;
+  --good: #2f9e6b;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-graphite: var(--graphite);
+  --color-panel: var(--panel);
+  --color-fog: var(--fog);
+  --color-mist: var(--mist);
+  --color-mute: var(--mute);
+  --color-line: var(--line);
+  --color-signal: var(--signal);
+  --color-signal-deep: var(--signal-deep);
+  --color-good: var(--good);
+  --font-display: var(--font-archivo);
+  --font-body: var(--font-manrope);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 90, 31, 0.45) transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--void);
+}
+
+body {
+  background: var(--void);
+  color: var(--fog);
+  font-family: var(--font-body), sans-serif;
+}
+
+::selection {
+  background: var(--signal);
+  color: #111;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 80;
+  border-radius: 999px;
+  background: var(--signal);
+  color: #111;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.radar-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 70% 45%, black 18%, transparent 72%);
+}
+
+.noise {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.22) 0.6px, transparent 0.6px);
+  background-size: 18px 18px;
+  opacity: 0.18;
+  mask-image: radial-gradient(circle at center, black, transparent 75%);
+}
+
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+
+@keyframes float-y {
+  from { transform: translateY(0); }
+  to { transform: translateY(-10px); }
+}
+
+@keyframes deal-pop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  48% { transform: translateY(-3px) scale(1.025); }
+}
+
+@keyframes deal-shine {
+  from { transform: translateX(-140%) skewX(-18deg); }
+  to { transform: translateX(180%) skewX(-18deg); }
+}
+
+.radar-sweep {
+  transform-origin: center;
+  animation: sweep 11s linear infinite;
+}
+
+.live-dot {
+  animation: pulse-dot 2.8s ease-in-out infinite;
+}
+
+.float-slow {
+  animation: float-y 5.5s ease-in-out infinite alternate;
+}
+
+.signal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 90, 31, 0.35);
+  background: rgba(255, 90, 31, 0.08);
+  color: var(--signal);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+}
+
+.signal-chip[data-tone="mute"] {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mist);
+}
+
+.signal-chip[data-tone="live"] {
+  border-color: rgba(255, 90, 31, 0.45);
+}
+
+.signal-chip[data-tone="alert"] {
+  border-color: rgba(47, 158, 107, 0.4);
+  background: rgba(47, 158, 107, 0.1);
+  color: #8fe0b8;
+}
+
+.ticker-track {
+  animation: ticker 32s linear infinite;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.product-glow {
+  box-shadow: 0 0 0 1px rgba(255, 90, 31, 0), 0 30px 80px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 420ms var(--ease), transform 420ms var(--ease);
+}
+
+.hero-offer-card {
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 1px rgba(255, 90, 31, 0.08),
+    0 24px 80px rgba(0, 0, 0, 0.45),
+    0 0 70px rgba(255, 90, 31, 0.12);
+}
+
+.hero-offer-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, transparent 0 25%, rgba(255, 90, 31, 0.32), transparent 58%),
+    linear-gradient(40deg, rgba(110, 231, 249, 0.16), transparent 38%);
+  opacity: 0.65;
+  mix-blend-mode: screen;
+}
+
+.hero-offer-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.deal-surface {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 90, 31, 0.12), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(110, 231, 249, 0.08), transparent 28%),
+    var(--void);
+}
+
+.deal-pop {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 999px;
+  animation: deal-pop 2.8s var(--ease) infinite;
+  box-shadow: 0 10px 28px rgba(255, 90, 31, 0.24);
+}
+
+.deal-pop::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% -35%;
+  z-index: -1;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: deal-shine 3.4s ease-in-out infinite;
+}
+
+.deal-pop[data-tone="flame"] {
+  background: linear-gradient(135deg, #ff5a1f, #ffd54a);
+  color: #140805;
+}
+
+.deal-pop[data-tone="gold"] {
+  background: linear-gradient(135deg, #ffd15c, #fff3b0);
+  color: #171009;
+}
+
+.deal-pop[data-tone="rose"] {
+  background: linear-gradient(135deg, #ff4d8d, #ffb36b);
+  color: #180710;
+}
+
+.deal-pop[data-tone="electric"] {
+  background: linear-gradient(135deg, #6ee7f9, #9dff8f);
+  color: #041216;
+}
+
+.deal-pop[data-tone="lime"] {
+  background: linear-gradient(135deg, #b6ff5c, #fff06a);
+  color: #101407;
+}
+
+.group:hover .product-glow,
+.product-glow:hover {
+  box-shadow: 0 0 0 1px rgba(255, 90, 31, 0.28), 0 24px 70px rgba(255, 90, 31, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .radar-sweep,
+  .live-dot,
+  .float-slow,
+  .deal-pop,
+  .deal-pop::after,
+  .ticker-track {
+    animation: none !important;
+  }
+}
