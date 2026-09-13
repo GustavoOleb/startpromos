@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cardinal/scan",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/telegram/publish",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

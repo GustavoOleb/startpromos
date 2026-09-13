@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FOOTER_INFO, SITE } from "@/lib/site";
-import { getPublicNavItems } from "@/lib/products";
+import type { NavItem } from "@/lib/products";
 
-export default function Footer() {
-  const nav = getPublicNavItems();
+export default function Footer({ navItems }: { navItems: NavItem[] }) {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/dashadmin")) return null;
 
   return (
     <footer className="mt-8 border-t border-white/10">
@@ -18,7 +23,7 @@ export default function Footer() {
         </div>
         <nav aria-label="Rodapé" className="grid grid-cols-2 gap-8 text-sm">
           <div className="flex flex-col gap-2">
-            {nav.map((item) => (
+            {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="text-mist hover:text-fog">
                 {item.label}
               </Link>

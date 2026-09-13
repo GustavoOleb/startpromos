@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import OfferExplorer from "@/components/OfferExplorer";
-import { getPublishedProducts } from "@/lib/products";
+import { getPublishedProductsLive } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Ofertas",
@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/ofertas" },
 };
 
-export default function OfertasPage() {
-  const catalog = getPublishedProducts();
+export default async function OfertasPage() {
+  const catalog = await getPublishedProductsLive();
   return (
     <Suspense fallback={<div className="px-6 py-20 text-mute">Lendo o campo...</div>}>
       <OfferExplorer products={catalog} heading="Ofertas" />

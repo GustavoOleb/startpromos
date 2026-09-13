@@ -31,3 +31,34 @@ A automacao de feed, revalidacao de links, monitoramento de disponibilidade, ale
 ## Ambiente
 
 Copie `.env.example` para o ambiente de deploy. Tokens de redes afiliadas sao exclusivamente server-side e permanecem vazios ate existir uma integracao oficial aprovada.
+# Cardinal 24/7
+
+O Cardinal é o agente invisível do StartPromos. Ele deve buscar ofertas, validar dados, comparar preço, enriquecer produtos e manter o catálogo pronto para publicação sem expor nada disso ao visitante.
+
+## Fluxo atual
+
+- `/dashadmin` abre o painel privado.
+- `/dashadmin/login` autentica com variáveis `ADMIN_USERNAME`, `ADMIN_PASSWORD` e `ADMIN_SESSION_SECRET`.
+- `/api/dashadmin/import` recebe blocos de texto com nomes e links e devolve rascunhos validados.
+- `/api/cardinal/scan` é o endpoint preparado para Vercel Cron. Use `Authorization: Bearer CARDINAL_CRON_SECRET`.
+- `docs/supabase-schema.sql` define as tabelas de produtos, execuções e rascunhos.
+
+## Regra de publicação
+
+Um produto só deve virar público quando tiver, no mínimo:
+
+- nome confiável;
+- imagem HTTPS de boa qualidade;
+- link permitido;
+- origem e data de verificação;
+- preço real ou, quando o marketplace esconder o preço, copy de preço surpresa sem inventar valor.
+
+Avaliações, vendas e notas só entram quando forem dados reais.
+
+## Próximos conectores
+
+- TikTok Shop: expandir link curto, coletar metadados e preço quando expostos.
+- SHEIN: usar API/parceiro ou parser autorizado para preço, imagem e rating.
+- Shopee e outros marketplaces: normalizar por rede, com fallback por busca do nome.
+- Supabase: trocar catálogo local por consulta server-side com cache e revalidação.
+- Vercel Cron: chamar o Cardinal em intervalos curtos e registrar cada execução.

@@ -3,29 +3,31 @@
 import Link from "next/link";
 import { useRef, type MouseEvent } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
-import { discountPct, formatBRL, formatPrice, getPublishedProducts, savings, socialProof } from "@/lib/products";
+import { discountPct, formatBRL, formatPrice, savings, socialProof, type Product } from "@/lib/products";
 import ProductArt from "@/components/ProductArt";
 import SignalBadge from "@/components/SignalBadge";
 import DealPop from "@/components/DealPop";
+import { getCardinalIdentity } from "@/lib/cardinal-identity";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { getPrimarySignal } from "@/lib/signals";
 
-const marks = ["SCAN", "SIGNAL", "DETECTED", "PRICE DROP", "NEW FIND", "OPPORTUNITY"];
+const marks = ["INSTINTO", "DOPAMINA", "ABRÍVEL", "FOTO CONVENCE", "GARIMPO CRU", "ANTI-ARREPENDIMENTO"];
 
-export default function HeroRadar() {
+export default function HeroRadar({ products }: { products: Product[] }) {
   const reduced = usePrefersReducedMotion();
   const layer = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const sx = useSpring(x, { stiffness: 40, damping: 18 });
   const sy = useSpring(y, { stiffness: 40, damping: 18 });
-  const catalog = getPublishedProducts();
+  const catalog = products;
   const ranked = [...catalog].sort((a, b) => discountPct(b) - discountPct(a) || a.foundMinutesAgo - b.foundMinutesAgo);
   const spotlight = ranked.find((product) => product.price === 0) ?? ranked[0];
   const orbit = ranked.filter((product) => product.slug !== spotlight?.slug).slice(0, 3);
   const spotlightSignal = spotlight ? getPrimarySignal(spotlight) : null;
   const spotlightDiscount = spotlight ? discountPct(spotlight) : 0;
   const spotlightProof = spotlight ? socialProof(spotlight) : [];
+  const spotlightIdentity = spotlight ? getCardinalIdentity(spotlight) : null;
 
   function onMove(event: MouseEvent<HTMLElement>) {
     if (reduced) return;
@@ -88,7 +90,7 @@ export default function HeroRadar() {
       </div>
 
       <div className="relative mx-auto grid min-h-[100svh] max-w-[1400px] items-end gap-8 px-4 pb-10 pt-20 sm:px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.58fr)] lg:items-center lg:pb-10 lg:pt-6">
-        <div>
+        <div className="order-last lg:order-none">
           <p className="mb-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.22em] text-signal">
             <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-signal" />
             Estação de melhores preços
@@ -99,7 +101,7 @@ export default function HeroRadar() {
             Mais achado.
           </h1>
           <p className="mt-8 max-w-md text-base leading-7 text-mist sm:text-lg">
-            Ofertas encontradas, comparadas e organizadas pelo Cardinal para você olhar direto o que vale atenção.
+            Ofertas encontradas, comparadas e organizadas pelo Cardinal por preço, aparência, desejo e chance real de valer o clique.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -115,7 +117,7 @@ export default function HeroRadar() {
               Como funciona
             </Link>
           </div>
-          <ul className="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-white/25">
+          <ul className="mt-10 hidden flex-wrap gap-x-5 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-white/25 sm:flex">
             {marks.map((mark) => (
               <li key={mark}>{mark}</li>
             ))}
@@ -126,15 +128,25 @@ export default function HeroRadar() {
             initial={reduced ? false : { opacity: 0, y: 24, scale: 0.97 }}
             animate={reduced ? undefined : { opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="hero-offer-card group relative max-h-[calc(100svh-6.5rem)] overflow-hidden border border-white/10 bg-graphite/70 p-3 shadow-2xl backdrop-blur-xl"
+            className="hero-offer-card group relative order-first max-h-[calc(100svh-5.5rem)] overflow-hidden border border-white/10 bg-graphite/70 p-3 shadow-2xl backdrop-blur-xl lg:order-none lg:max-h-[calc(100svh-6.5rem)]"
           >
             <Link href={`/produto/${spotlight.slug}`} className="block">
-              <div className="relative h-[min(58svh,560px)] min-h-[360px] overflow-hidden">
+              <div className="relative h-[min(52svh,560px)] min-h-[300px] overflow-hidden sm:min-h-[340px] lg:h-[min(58svh,560px)] lg:min-h-[360px]">
                 <ProductArt product={spotlight} className="h-full w-full" priority sizes="(max-width: 1024px) 100vw, 440px" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-void via-void/70 to-transparent p-4 sm:p-5">
                   {spotlightSignal && <SignalBadge signal={spotlightSignal} />}
-                  <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-signal">Oferta imperdível agora</p>
-                  <h2 className="mt-2 line-clamp-2 font-display text-xl font-black leading-tight sm:text-2xl">{spotlight.name}</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-signal">Oferta imperdível agora</p>
+                    {spotlightIdentity && (
+                      <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-fog">
+                        {spotlightIdentity.temperatureLabel}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-2 line-clamp-2 font-display text-xl font-black leading-tight sm:text-2xl">
+                    {spotlightIdentity?.commercialTitle ?? spotlight.name}
+                  </h2>
+                  {spotlightIdentity && <p className="mt-1 line-clamp-2 text-xs font-semibold text-mist">Cardinal: {spotlightIdentity.whisper}</p>}
                   <div className="mt-3 flex flex-wrap items-end gap-3">
                     <p className="font-display text-3xl font-extrabold sm:text-4xl">{formatPrice(spotlight)}</p>
                     {spotlight.oldPrice && <p className="text-sm text-mute line-through">{formatBRL(spotlight.oldPrice)}</p>}
@@ -144,6 +156,12 @@ export default function HeroRadar() {
                     <p className="mt-1 text-sm text-good">Economia {formatBRL(savings(spotlight))} · -{spotlightDiscount}%</p>
                   )}
                   {spotlightProof.length > 0 && <p className="mt-2 text-xs text-mist">{spotlightProof.join(" · ")}</p>}
+                  {spotlightIdentity && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-mist">
+                      <span>Dopamina {spotlightIdentity.dopamineScore}</span>
+                      <span>Impulso {spotlightIdentity.impulseScore}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </Link>

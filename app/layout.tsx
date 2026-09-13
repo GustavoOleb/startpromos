@@ -4,6 +4,8 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MotionRoot from "@/components/MotionRoot";
+import PurchaseToasts from "@/components/PurchaseToasts";
+import { getPublicNavItemsFromProducts, getPublishedProductsLive } from "@/lib/products";
 import { SITE } from "@/lib/site";
 
 const archivo = Archivo({
@@ -64,20 +66,24 @@ const jsonLd = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const toastProducts = await getPublishedProductsLive();
+  const navItems = getPublicNavItemsFromProducts(toastProducts);
+
   return (
-    <html lang="pt-BR" className={`${archivo.variable} ${manrope.variable} h-full antialiased`}>
+    <html lang="pt-BR" data-scroll-behavior="smooth" className={`${archivo.variable} ${manrope.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-void font-body text-fog">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <a href="#conteudo" className="skip-link">
           Ir para o conteúdo
         </a>
         <MotionRoot>
-          <Header />
+          <Header navItems={navItems} />
           <main id="conteudo" className="flex-1">
             {children}
           </main>
-          <Footer />
+          <PurchaseToasts products={toastProducts} />
+          <Footer navItems={navItems} />
         </MotionRoot>
       </body>
     </html>

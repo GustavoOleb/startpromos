@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import OfferExplorer from "@/components/OfferExplorer";
-import { getPublishedByCategory } from "@/lib/products";
+import { getPublishedByCategoryLive } from "@/lib/products";
 import ProductArt from "@/components/ProductArt";
 
 export const metadata: Metadata = {
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/roupas" },
 };
 
-export default function RoupasPage() {
-  const items = getPublishedByCategory("roupas");
+export default async function RoupasPage() {
+  const items = await getPublishedByCategoryLive("roupas");
   const hero = items[0];
 
   return (

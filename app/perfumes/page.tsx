@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getPublishedByCategory } from "@/lib/products";
+import { getPublishedByCategoryLive } from "@/lib/products";
 import OfferExplorer from "@/components/OfferExplorer";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/perfumes" },
 };
 
-export default function PerfumesPage() {
-  const items = getPublishedByCategory("perfumes");
+export default async function PerfumesPage() {
+  const items = await getPublishedByCategoryLive("perfumes");
   if (!items.length) notFound();
 
   return (

@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { categoryHref, getActiveCategories, getPublishedProducts } from "@/lib/products";
+import { categoryHref, getActiveCategories, getPublishedProductsLive } from "@/lib/products";
 import { SITE } from "@/lib/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryRoutes = getActiveCategories()
     .map((category) => categoryHref(category.slug))
     .filter((path) => !path.includes("?"));
@@ -13,7 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily" as const,
       priority: path === "" ? 1 : 0.8,
     })),
-    ...getPublishedProducts().map((product) => ({
+    ...(await getPublishedProductsLive()).map((product) => ({
       url: `${SITE.url}/produto/${product.slug}`,
       changeFrequency: "daily" as const,
       priority: 0.7,

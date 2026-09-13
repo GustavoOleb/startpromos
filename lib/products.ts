@@ -1,4 +1,5 @@
 import { isAllowedAffiliateUrl } from "./affiliate-networks.ts";
+import { getSupabasePublishedProducts } from "./supabase.ts";
 
 export type Category = "roupas" | "perfumes" | "beleza" | "calcados" | "casa" | "tech";
 
@@ -228,6 +229,8 @@ export const categories: { slug: Category; label: string; href: string; kicker: 
 
 export const affiliateCode = "QCW38LD";
 
+export type NavItem = { href: string; label: string };
+
 export function categoryHref(category: Category) {
   if (category === "roupas" || category === "perfumes") return `/${category}`;
   return `/ofertas?cat=${category}`;
@@ -241,11 +244,24 @@ export function getActiveCategories() {
   return categories.filter((category) => getPublishedByCategory(category.slug).length > 0);
 }
 
+export function getActiveCategoriesFromProducts(catalog: Product[]) {
+  return categories.filter((category) => catalog.some((product) => product.category === category.slug));
+}
+
 export function getPublicNavItems() {
   return [
     { href: "/", label: "Início" },
     { href: "/ofertas", label: "Ofertas" },
     ...getActiveCategories().map((category) => ({ href: category.href, label: category.label })),
+    { href: "/salvos", label: "Salvos" },
+  ];
+}
+
+export function getPublicNavItemsFromProducts(catalog: Product[]): NavItem[] {
+  return [
+    { href: "/", label: "Início" },
+    { href: "/ofertas", label: "Ofertas" },
+    ...getActiveCategoriesFromProducts(catalog).map((category) => ({ href: category.href, label: category.label })),
     { href: "/salvos", label: "Salvos" },
   ];
 }
@@ -257,6 +273,32 @@ export function getPublishedProducts() {
       product.image.startsWith("https://") &&
       isAllowedAffiliateUrl(product.affiliateUrl),
   );
+}
+
+export async function getPublishedProductsLive() {
+  const local = getPublishedProducts();
+  const remote = await getSupabasePublishedProducts();
+  const merged = new Map(local.map((product) => [product.slug, product]));
+  for (const product of remote) {
+    if (product.image.startsWith("https://") && isAllowedAffiliateUrl(product.affiliateUrl)) {
+      merged.set(product.slug, product);
+    }
+  }
+  return [...merged.values()];
+}
+
+export async function getPublishedByCategoryLive(category: Category) {
+  return (await getPublishedProductsLive()).filter((product) => product.category === category);
+}
+
+export async function getProductBySlugLive(slug: string) {
+  return (await getPublishedProductsLive()).find((product) => product.slug === slug);
+}
+
+export async function getRelatedLive(product: Product, limit = 4) {
+  return (await getPublishedProductsLive())
+    .filter((item) => item.slug !== product.slug && item.category === product.category)
+    .slice(0, limit);
 }
 
 export function getRelated(product: Product, limit = 4) {

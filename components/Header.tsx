@@ -5,16 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bookmark, Menu, Search, X } from "lucide-react";
-import { getPublicNavItems } from "@/lib/products";
+import type { NavItem } from "@/lib/products";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useScrolled } from "@/hooks/useMotion";
 import SearchOverlay from "@/components/SearchOverlay";
 
-export default function Header() {
+export default function Header({ navItems }: { navItems: NavItem[] }) {
   const pathname = usePathname();
   const scrolled = useScrolled(12);
   const { count } = useFavorites();
-  const nav = getPublicNavItems();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -42,6 +41,8 @@ export default function Header() {
     };
   }, [menuOpen, searchOpen]);
 
+  if (pathname.startsWith("/dashadmin")) return null;
+
   return (
     <>
       <header
@@ -60,7 +61,7 @@ export default function Header() {
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Principal">
-            {nav.map((item) => {
+            {navItems.map((item) => {
               const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
               return (
                 <Link
@@ -115,7 +116,7 @@ export default function Header() {
             aria-label="Mobile"
             className="flex flex-col gap-1 border-t border-white/10 bg-void px-4 py-4 lg:hidden"
           >
-            {nav.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

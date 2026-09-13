@@ -4,8 +4,8 @@ import {
   formatBRL,
   formatPrice,
   getPublishedProducts,
-  getRelated,
-  getProductBySlug,
+  getProductBySlugLive,
+  getRelatedLive,
   productImageUrl,
   savings,
   socialProof,
@@ -21,6 +21,8 @@ import AffiliateCta from "@/components/AffiliateCta";
 import PriceHistory from "@/components/PriceHistory";
 import ProductCard from "@/components/ProductCard";
 import DealPop from "@/components/DealPop";
+import CardinalIdentityPanel from "@/components/CardinalIdentityPanel";
+import { getCardinalIdentity } from "@/lib/cardinal-identity";
 import { getPrimarySignal } from "@/lib/signals";
 import { SITE } from "@/lib/site";
 
@@ -30,8 +32,8 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
-  if (!product || !getPublishedProducts().some((item) => item.slug === product.slug)) return { title: "Produto não encontrado" };
+  const product = await getProductBySlugLive(slug);
+  if (!product) return { title: "Produto não encontrado" };
   return {
     title: product.name,
     description: product.description,
@@ -46,14 +48,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
-  if (!product || !getPublishedProducts().some((item) => item.slug === product.slug)) notFound();
+  const product = await getProductBySlugLive(slug);
+  if (!product) notFound();
 
   const discount = discountPct(product);
   const signal = getPrimarySignal(product);
   const store = product.offers[0]?.store;
-  const related = getRelated(product);
+  const related = await getRelatedLive(product);
   const proof = socialProof(product);
+  const identity = getCardinalIdentity(product);
   const verified = product.lastVerifiedAt
     ? new Date(product.lastVerifiedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
     : null;
@@ -100,7 +103,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {product.brand} · {product.subcategory}
             {store ? ` · ${store}` : ""}
           </p>
-          <h1 className="mt-3 font-display text-4xl font-black tracking-tight sm:text-5xl">{product.name}</h1>
+          <h1 className="mt-3 font-display text-4xl font-black tracking-tight sm:text-5xl">{identity.commercialTitle}</h1>
+          <p className="mt-3 text-sm text-mute">{product.name}</p>
           <div className="mt-6 flex flex-wrap items-end gap-3">
             <p className="font-display text-5xl font-extrabold">{formatPrice(product)}</p>
             {product.oldPrice && <p className="text-lg text-mute line-through">{formatBRL(product.oldPrice)}</p>}
@@ -116,6 +120,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               ))}
             </div>
           )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            {identity.personality.map((item) => (
+              <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-mist">
+                {item}
+              </span>
+            ))}
+          </div>
+          <p className="mt-5 text-sm font-bold text-signal">{identity.nickname}</p>
           <p className="mt-6 max-w-md text-sm leading-6 text-mist">{product.description}</p>
           {verified && <p className="mt-4 text-xs text-mute">Última verificação: {verified}</p>}
           <div className="mt-8 hidden items-start gap-3 lg:flex">
@@ -129,6 +141,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <div className="mt-16 grid gap-8 lg:grid-cols-2">
+        <CardinalIdentityPanel product={product} />
         <PriceHistory product={product} />
         <div className="border border-white/10 p-6">
           <p className="text-[11px] uppercase tracking-[0.18em] text-signal">Transparência</p>
