@@ -36,6 +36,19 @@ type ImportResult = {
   notes: string[];
   attempts?: Array<{ source: string; ok: boolean; reason?: string }>;
   persistence?: { ok: boolean; skipped?: boolean; reason?: string; status?: number; runId?: string };
+  telegram?: TelegramPublishResult;
+};
+
+type TelegramPublishResult = {
+  ok: boolean;
+  skipped?: boolean;
+  product?: string;
+  reason?: string;
+  messageId?: number;
+  count?: number;
+  failedCount?: number;
+  sent?: Array<{ product: string; messageId?: number }>;
+  failed?: Array<{ product: string; reason?: string }>;
 };
 
 type TelegramDashboardState = {
@@ -66,7 +79,10 @@ export default function AdminDashboard({
   const [pending, setPending] = useState(false);
   const [syncPending, setSyncPending] = useState(false);
   const [telegramPending, setTelegramPending] = useState(false);
-  const [telegramResult, setTelegramResult] = useState<{ ok: boolean; skipped?: boolean; product?: string; reason?: string; messageId?: number } | null>(null);
+  const [telegramResult, setTelegramResult] = useState<TelegramPublishResult | null>(null);
+  const [selectedProductSlug, setSelectedProductSlug] = useState(products[0]?.slug ?? "");
+  const [importMassLimit, setImportMassLimit] = useState(0);
+  const [publishAfterImport, setPublishAfterImport] = useState(true);
   const unknownPrices = products.filter((product) => product.price === 0).length;
   const heroProducts = products.slice(0, 5);
   const lastVerified = [...products]
@@ -77,14 +93,26 @@ export default function AdminDashboard({
 
   async function importLinks() {
     setPending(true);
-    const response = await fetch("/api/dashadmin/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw }),
-    });
-    const data = await response.json();
-    setPending(false);
-    setResult(data);
+    try {
+      const response = await fetch("/api/dashadmin/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw, publishTelegram: publishAfterImport, telegramLimit: importMassLimit }),
+      });
+      const data = await readJsonResponse<ImportResult>(response);
+      setResult(data);
+    } catch (error) {
+      setResult({
+        checkedLinks: 0,
+        accepted: 0,
+        rejected: 0,
+        drafts: [],
+        notes: [error instanceof Error ? error.message : "Falha ao importar."],
+        telegram: { ok: false, reason: error instanceof Error ? error.message : "Falha ao importar." },
+      });
+    } finally {
+      setPending(false);
+    }
   }
 
   async function logout() {
@@ -95,18 +123,32 @@ export default function AdminDashboard({
 
   async function syncProducts() {
     setSyncPending(true);
-    const response = await fetch("/api/dashadmin/sync-products", { method: "POST" });
-    const data = await response.json();
-    setSyncPending(false);
-    setSyncResult(data);
+    try {
+      const response = await fetch("/api/dashadmin/sync-products", { method: "POST" });
+      const data = await readJsonResponse<{ ok: boolean; count?: number; reason?: string; status?: number }>(response);
+      setSyncResult(data);
+    } catch (error) {
+      setSyncResult({ ok: false, reason: error instanceof Error ? error.message : "Falha ao sincronizar." });
+    } finally {
+      setSyncPending(false);
+    }
   }
 
-  async function publishTelegram() {
+  async function publishTelegram(options?: { slug?: string; mass?: boolean; limit?: number }) {
     setTelegramPending(true);
-    const response = await fetch("/api/telegram/publish?force=1");
-    const data = await response.json();
-    setTelegramPending(false);
-    setTelegramResult(data);
+    try {
+      const response = await fetch("/api/telegram/publish?force=1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options ?? {}),
+      });
+      const data = await readJsonResponse<TelegramPublishResult>(response);
+      setTelegramResult(data);
+    } catch (error) {
+      setTelegramResult({ ok: false, reason: error instanceof Error ? error.message : "Falha no Telegram." });
+    } finally {
+      setTelegramPending(false);
+    }
   }
 
   return (
@@ -160,7 +202,7 @@ export default function AdminDashboard({
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
-                  onClick={publishTelegram}
+                  onClick={() => publishTelegram()}
                   disabled={telegramPending || !telegram.configured}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#ff5a1f] px-4 text-sm font-extrabold text-white shadow-[0_12px_38px_rgba(255,90,31,0.28)] disabled:cursor-wait disabled:opacity-60"
                 >
@@ -184,7 +226,7 @@ export default function AdminDashboard({
             )}
             {telegramResult && (
               <p className={`mt-4 rounded-md px-3 py-2 text-xs font-bold ${telegramResult.ok ? "bg-sky-400/15 text-sky-200" : "bg-red-400/15 text-red-200"}`}>
-                {telegramResult.ok ? `Telegram enviado${telegramResult.product ? ` · ${telegramResult.product}` : ""}` : telegramResult.reason ?? "Falha no Telegram"}
+                {telegramResult.ok ? `${telegramResult.count ?? 1} envio(s) no Telegram${telegramResult.product ? ` · ${telegramResult.product}` : ""}` : telegramResult.reason ?? "Falha no Telegram"}
               </p>
             )}
           </section>
@@ -207,7 +249,7 @@ export default function AdminDashboard({
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-display text-2xl font-black">Importador Cardinal</h2>
-                  <p className="mt-1 text-sm text-white/55">Cole links do TikTok Shop, SHEIN, Shopee e futuros marketplaces. O Cardinal valida, publica e alimenta o bot.</p>
+                  <p className="mt-1 text-sm text-white/55">Cole os blocos com nome, preço e link. O importador publica os produtos novos e dispara no Telegram quando a opção estiver marcada.</p>
                 </div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-200">
                   <RefreshCw className="h-3.5 w-3.5" />
@@ -222,12 +264,39 @@ export default function AdminDashboard({
               />
               <button onClick={importLinks} disabled={pending || !raw.trim()} className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#ff5a1f] px-5 font-display text-sm font-extrabold text-white hover:bg-[#e64f19] disabled:cursor-not-allowed disabled:opacity-60">
                 <Upload className="h-4 w-4" />
-                {pending ? "Analisando" : "Analisar links"}
+                {pending ? "Analisando e lançando" : "Importar e lançar"}
               </button>
+              <div className="mt-3 grid gap-3 rounded-md border border-white/10 bg-white/[0.035] p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+                <label className="flex items-center gap-3 text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={publishAfterImport}
+                    onChange={(event) => setPublishAfterImport(event.target.checked)}
+                    className="h-4 w-4 accent-[#ff5a1f]"
+                  />
+                  Enviar os produtos importados no Telegram depois do import
+                </label>
+                <label className="flex items-center gap-2 text-white/60">
+                  Lote
+                  <input
+                    type="number"
+                    min={0}
+                    value={importMassLimit}
+                    onChange={(event) => setImportMassLimit(Math.max(0, Number(event.target.value) || 0))}
+                    className="h-9 w-20 rounded-md border border-white/10 bg-black/25 px-2 text-white outline-none focus:border-[#ff5a1f]"
+                  />
+                  <span className="text-xs text-white/38">0 = todos</span>
+                </label>
+              </div>
               {result && (
                 <div className="mt-4 rounded-md border border-white/10 bg-black/18 p-4">
                   <p className="font-display text-lg font-black">{result.checkedLinks} links analisados</p>
                   <p className="mt-1 text-sm text-white/55">{result.accepted} completos · {result.rejected} precisam de enriquecimento</p>
+                  {result.telegram && (
+                    <p className={`mt-2 rounded-md px-3 py-2 text-xs font-bold ${result.telegram.ok ? "bg-sky-400/15 text-sky-200" : "bg-red-400/15 text-red-200"}`}>
+                      Telegram: {result.telegram.ok ? `${result.telegram.count ?? 0} oferta(s) lançada(s) em massa` : result.telegram.reason ?? "falha no lançamento"}
+                    </p>
+                  )}
                   {result.persistence && (
                     <p className={`mt-2 rounded-md px-3 py-2 text-xs font-bold ${result.persistence.ok ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200"}`}>
                       Supabase: {result.persistence.ok ? `salvo${result.persistence.runId ? ` · ${result.persistence.runId}` : ""}` : result.persistence.reason || `erro ${result.persistence.status ?? ""}`}
@@ -273,6 +342,36 @@ export default function AdminDashboard({
                 </div>
                 <p className="mt-4 text-sm text-white/70">Última verificação local: {lastVerified ? new Date(lastVerified).toLocaleString("pt-BR") : "aguardando conexão"}</p>
                 <p className="mt-1 text-sm text-white/70">Último post: {telegram.lastSentAt ? new Date(telegram.lastSentAt).toLocaleString("pt-BR") : "ainda não enviado"}</p>
+                <div className="mt-5 rounded-md border border-white/10 bg-black/20 p-3">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ffb36b]">Disparo específico</p>
+                  <select
+                    value={selectedProductSlug}
+                    onChange={(event) => setSelectedProductSlug(event.target.value)}
+                    className="mt-3 h-11 w-full rounded-md border border-white/10 bg-[#0c1020] px-3 text-sm font-semibold text-white outline-none focus:border-[#ff5a1f]"
+                  >
+                    {products.map((product) => (
+                      <option key={product.slug} value={product.slug}>{product.name}</option>
+                    ))}
+                  </select>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <button
+                      onClick={() => publishTelegram({ slug: selectedProductSlug })}
+                      disabled={telegramPending || !telegram.configured || !selectedProductSlug}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-[#ff5a1f] px-3 text-xs font-extrabold text-white disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <Send className="h-4 w-4" />
+                      Disparar escolhido
+                    </button>
+                    <button
+                      onClick={() => publishTelegram({ mass: true })}
+                      disabled={telegramPending || !telegram.configured}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/15 px-3 text-xs font-extrabold text-white disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <Flame className="h-4 w-4" />
+                      Lançar massa
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="rounded-lg border border-white/10 bg-[#111628]/82 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.22)] backdrop-blur-xl">
                 <h2 className="font-display text-2xl font-black">Esteira automática</h2>
@@ -316,6 +415,16 @@ export default function AdminDashboard({
       </div>
     </div>
   );
+}
+
+async function readJsonResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    const reason = typeof data?.reason === "string" ? data.reason : typeof data?.message === "string" ? data.message : `Erro ${response.status}`;
+    throw new Error(reason);
+  }
+  return data as T;
 }
 
 function Metric({ label, value, detail, tone, icon: Icon }: { label: string; value: string; detail: string; tone: "green" | "orange" | "blue" | "purple"; icon: typeof ChartNoAxesCombined }) {

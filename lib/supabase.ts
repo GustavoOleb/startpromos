@@ -98,8 +98,10 @@ function networkLabel(network?: string) {
   return "Marketplace";
 }
 
-function draftToProductRow(draft: ImportDraft) {
-  if (!draft.name || !draft.imageUrl || !draft.affiliateUrl) return null;
+const FALLBACK_PRODUCT_IMAGE = "https://placehold.co/900x900/111111/ff5a1f/png?text=StartPromos";
+
+export function draftToPublishedProduct(draft: ImportDraft): Product | null {
+  if (!draft.name || !draft.affiliateUrl) return null;
   const category = inferCategory(`${draft.name} ${draft.category ?? ""} ${draft.subcategory ?? ""}`);
   const price = draft.currentPrice && draft.currentPrice > 0 ? draft.currentPrice : 0;
   const store = networkLabel(draft.network);
@@ -111,23 +113,27 @@ function draftToProductRow(draft: ImportDraft) {
     subcategory: draft.subcategory || draft.category || (category === "roupas" ? "Achados" : "Ofertas"),
     brand: draft.brand || store,
     price,
-    old_price: draft.previousPrice ?? null,
-    rating: draft.rating ?? null,
-    rating_count: draft.reviewCount ?? null,
-    sales_count: null,
-    image_url: draft.imageUrl,
-    affiliate_url: draft.affiliateUrl,
+    oldPrice: draft.previousPrice,
+    rating: draft.rating,
+    ratingCount: draft.reviewCount,
+    image: draft.imageUrl || FALLBACK_PRODUCT_IMAGE,
+    affiliateUrl: draft.affiliateUrl,
     palette: ["#111111", "#ff5a1f"],
     offers: [{ store, price, affiliateReady: true, isBest: true }],
-    price_history: price > 0 ? [price] : [],
-    found_minutes_ago: 1,
+    priceHistory: price > 0 ? [price] : [],
+    foundMinutesAgo: 1,
     tags: draft.tags ?? [],
     description: draft.name,
     source: draft.source ?? draft.originalUrl ?? draft.affiliateUrl,
-    last_verified_at: draft.lastVerifiedAt ?? new Date().toISOString(),
-    network: draft.network ?? null,
+    lastVerifiedAt: draft.lastVerifiedAt ?? new Date().toISOString(),
+    network: draft.network,
     status: "published",
   };
+}
+
+function draftToProductRow(draft: ImportDraft) {
+  const product = draftToPublishedProduct(draft);
+  return product ? productToSupabaseRow(product) : null;
 }
 
 async function supabaseRequest(path: string, init: RequestInit = {}) {

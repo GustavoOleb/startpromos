@@ -26,8 +26,6 @@ export type ImportDraft = ImportProductInput & {
 
 const REQUIRED_FIELDS: Array<keyof ImportProductInput> = [
   "name",
-  "imageUrl",
-  "currentPrice",
   "affiliateUrl",
   "lastVerifiedAt",
   "source",

@@ -5,6 +5,7 @@ import { persistCardinalRun } from "@/lib/supabase";
 export type CardinalScanInput = {
   links: string[];
   names?: string[];
+  seeds?: Partial<ImportProductInput>[];
 };
 
 export type CardinalScanResult = {
@@ -41,15 +42,21 @@ export async function createCardinalDrafts(input: CardinalScanInput): Promise<Ca
     const name = input.names?.[index]?.trim();
     const extracted = await extractProductData(link.trim(), name);
     return {
+      ...(input.seeds?.[index] ?? {}),
       ...extracted,
       slug: name ? slugify(name) : undefined,
-      name: extracted.name ?? name,
+      name: extracted.name ?? input.seeds?.[index]?.name ?? name,
+      currentPrice: extracted.currentPrice ?? input.seeds?.[index]?.currentPrice,
+      previousPrice: extracted.previousPrice ?? input.seeds?.[index]?.previousPrice,
+      imageUrl: extracted.imageUrl ?? input.seeds?.[index]?.imageUrl,
+      rating: extracted.rating ?? input.seeds?.[index]?.rating,
+      reviewCount: extracted.reviewCount ?? input.seeds?.[index]?.reviewCount,
       affiliateUrl: link.trim(),
       originalUrl: link.trim(),
       network: extracted.network ?? inferNetwork(link),
       source: extracted.source ?? link.trim(),
       lastVerifiedAt: extracted.lastVerifiedAt ?? now,
-      tags: (extracted.tags?.length ? extracted.tags : name ? name.split(/\s+/).slice(0, 6) : []).filter(Boolean),
+      tags: (extracted.tags?.length ? extracted.tags : input.seeds?.[index]?.tags?.length ? input.seeds[index].tags : name ? name.split(/\s+/).slice(0, 6) : []).filter(Boolean),
       attempts: extracted.attempts,
     };
   }));

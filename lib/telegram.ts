@@ -1,4 +1,3 @@
-import { getCardinalIdentity } from "@/lib/cardinal-identity";
 import { discountPct, formatPrice, productImageUrl, type Product } from "@/lib/products";
 
 export type TelegramConfig = {
@@ -21,30 +20,28 @@ export function isTelegramConfigured() {
 }
 
 export function telegramProductScore(product: Product) {
-  const identity = getCardinalIdentity(product);
-  return identity.impulseScore + discountPct(product) + (product.price === 0 ? 6 : 0) + (product.ratingCount ? 6 : 0);
+  return 60 + discountPct(product) + (product.price === 0 ? 4 : 0) + (product.ratingCount ? 6 : 0) + (product.salesCount ? 6 : 0);
 }
 
 export function buildTelegramCaption(product: Product) {
-  const identity = getCardinalIdentity(product);
   const discount = discountPct(product);
-  const tags = identity.badges.slice(0, 3).join(" · ");
   const price = formatPrice(product);
-  const discountLine = product.price > 0 && discount > 0 ? `\n📉 Economia detectada: -${discount}%` : "";
+  const opener = publicOfferOpener(product);
+  const priceLine = product.price > 0 ? `💰 <b>${escapeHtml(price)}</b>` : "💰 <b>Preço especial na loja</b>";
+  const discountLine = product.price > 0 && discount > 0 ? `⚡ ${discount}% OFF` : "⚡ Oferta disponível agora";
+  const proof = publicProofLine(product);
 
-  return [
-    `🔥 ${identity.temperatureLabel.toUpperCase()} PELO CARDINAL`,
+  return trimTelegramCaption([
+    opener,
     "",
-    `<b>${escapeHtml(identity.commercialTitle)}</b>`,
-    escapeHtml(product.name),
+    `<b>${escapeHtml(product.name)}</b>`,
     "",
-    `💸 <b>${escapeHtml(price)}</b>${discountLine}`,
-    `🧠 ${escapeHtml(identity.verdict)}`,
-    `⚡ Dopamina ${identity.dopamineScore} · Impulso ${identity.impulseScore}`,
-    tags ? `📌 ${escapeHtml(tags)}` : "",
+    priceLine,
+    discountLine,
+    proof,
     "",
-    `<i>${escapeHtml(identity.whisper)}</i>`,
-  ].filter(Boolean).join("\n");
+    "👉 Toque no botão para ver na loja:",
+  ].filter(Boolean).join("\n"));
 }
 
 export function publicDealUrl(product: Product) {
@@ -58,6 +55,7 @@ export async function sendTelegramProduct(product: Product) {
   }
 
   const caption = buildTelegramCaption(product);
+  const dealUrl = publicDealUrl(product);
   const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendPhoto`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -67,17 +65,82 @@ export async function sendTelegramProduct(product: Product) {
       caption,
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [[{ text: "🔥 Ver oferta", url: publicDealUrl(product) }]],
+        inline_keyboard: [[{ text: "🔥 Ver oferta", url: dealUrl }]],
       },
     }),
   });
 
   const data = await response.json().catch(() => null) as { ok?: boolean; result?: { message_id?: number }; description?: string } | null;
   if (!response.ok || !data?.ok) {
-    return { ok: false as const, error: data?.description ?? `telegram-http-${response.status}`, caption };
+    const fallback = await sendTelegramTextProduct(product, caption);
+    if (fallback.ok) return fallback;
+    return { ok: false as const, error: fallback.error || data?.description || `telegram-http-${response.status}`, caption };
   }
 
   return { ok: true as const, messageId: data.result?.message_id, caption };
+}
+
+async function sendTelegramTextProduct(product: Product, caption: string) {
+  const config = getTelegramConfig();
+  if (!config.botToken || !config.channelId) {
+    return { ok: false as const, error: "telegram-not-configured", caption };
+  }
+
+  const dealUrl = publicDealUrl(product);
+  const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: config.channelId,
+      text: trimTelegramCaption(`${caption}\n\n${escapeHtml(dealUrl)}`),
+      parse_mode: "HTML",
+      disable_web_page_preview: false,
+      reply_markup: {
+        inline_keyboard: [[{ text: "🔥 Ver oferta", url: dealUrl }]],
+      },
+    }),
+  });
+
+  const data = await response.json().catch(() => null) as { ok?: boolean; result?: { message_id?: number }; description?: string } | null;
+  if (!response.ok || !data?.ok) {
+    return { ok: false as const, error: data?.description ?? `telegram-text-http-${response.status}`, caption };
+  }
+
+  return { ok: true as const, messageId: data.result?.message_id, caption };
+}
+
+function publicOfferOpener(product: Product) {
+  const openers = [
+    "🔥 Oferta encontrada!",
+    "🚨 Promoção passando agora!",
+    "💥 Achado bom para conferir!",
+    "🛍️ Olha essa oferta!",
+    "⚡ Oferta rápida!",
+  ];
+  return openers[hashString(product.slug) % openers.length];
+}
+
+function publicProofLine(product: Product) {
+  const proof = [];
+  if (product.rating && product.ratingCount) proof.push(`⭐ ${product.rating.toFixed(1)} com ${compact(product.ratingCount)} avaliações`);
+  if (product.salesCount) proof.push(`🛒 ${compact(product.salesCount)} vendidos`);
+  return proof.join("\n");
+}
+
+function compact(value: number) {
+  return new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function trimTelegramCaption(value: string) {
+  return value.slice(0, 950);
+}
+
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
 }
 
 function escapeHtml(value: string) {

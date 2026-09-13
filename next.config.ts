@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "p16-oec-sg.ibyteimg.com" },
       { protocol: "https", hostname: "p16-oec-va.ibyteimg.com" },
       { protocol: "https", hostname: "p19-oec-sg.ibyteimg.com" },
+      { protocol: "https", hostname: "http2.mlstatic.com" },
+      { protocol: "https", hostname: "http2.mlstatic.com.br" },
+      { protocol: "https", hostname: "cea.vtexassets.com" },
+      { protocol: "https", hostname: "static.santosstore.com.br" },
+      { protocol: "https", hostname: "images.tcdn.com.br" },
+      { protocol: "https", hostname: "cdn.awsli.com.br" },
+      { protocol: "https", hostname: "placehold.co" },
     ],
   },
   async headers() {
